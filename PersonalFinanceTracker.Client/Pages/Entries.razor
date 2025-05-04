@@ -1,0 +1,137 @@
+﻿@page "/"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject IHttpDataService<EntryDto> HttpDataService
+@using PersonalFinanceTracker.Client.Interfaces
+@using PersonalFinanceTracker.Shared.DTOs
+@using PersonalFinanceTracker.Shared.Enums
+@using System.Globalization
+
+<PageTitle>Dashboard</PageTitle>
+
+<MudText Typo="Typo.h4">Dashboard</MudText>
+<br/>
+
+@if (_entries == null)
+{
+    <MudText Typo="Typo.h6">Loading...</MudText>
+}
+else if (_entries.Count == 0)
+{
+    <MudText Typo="Typo.h6">No entries found</MudText>
+}
+else
+{
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" sm="4">
+            <MudCard Class="bg-success text-white">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6">Total Income</MudText>
+                    <MudText Typo="Typo.body2">@TotalIncome.ToString("C", new CultureInfo("en-LK"))</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="4">
+            <MudCard Class="bg-danger text-white">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6">Total Expenses</MudText>
+                    <MudText Typo="Typo.body2">@TotalExpenses.ToString("C", new CultureInfo("en-LK"))</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="4">
+            <MudCard Class="bg-info text-white">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6">Balance</MudText>
+                    <MudText Typo="Typo.body2">@Balance.ToString("C", new CultureInfo("en-LK"))</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+    <br />
+
+    <MudTable Class="mt-4" Items="@_entries" Hover="@hover" Filter="new Func<EntryDto,bool>(FilterFunc)">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">All Entries</MudText>
+            <MudSpacer />
+            <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Description</MudTh>
+            <MudTh>Amount</MudTh>
+            <MudTh>Type</MudTh>
+            <MudTh>Date</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Description">@context.Description</MudTd>
+            <MudTd DataLabel="Amount">@context.Amount.ToString("C", new CultureInfo("en-LK"))</MudTd>
+            <MudTd DataLabel="Type">@context.Type</MudTd>
+            <MudTd DataLabel="Date">@context.Date</MudTd>
+            <MudTd DataLabel="Actions">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" @onclick="() => EditEntry(context.Id)">Edit</MudButton>
+                <MudButton Variant=" Variant.Outlined" Color="Color.Secondary" @onclick="() => DeleteEntry(context.Id)">Delete</MudButton>
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    [Inject] private IDialogService DialogService { get; set; }
+
+    private List<EntryDto>? _entries;
+    private string url = "api/entry";
+    private bool hover = true;
+    private string searchString = "";
+    private decimal TotalIncome => _entries?.Where(e => e.Type == EntryType.Income).Sum(e => e.Amount) ?? 0;
+    private decimal TotalExpenses => _entries?.Where(e => e.Type == EntryType.Expense).Sum(e => e.Amount) ?? 0;
+    private decimal Balance => TotalIncome - TotalExpenses;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _entries = await HttpDataService.GetAllAsync(url);
+    }
+
+    private bool FilterFunc(EntryDto entry) => FilterFunc(entry, searchString);
+
+    private bool FilterFunc(EntryDto entry, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (entry.Type.ToString().Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (entry.Description.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (entry.Amount.ToString().Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (entry.Date.ToString().Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+
+    private void EditEntry(int id)
+    {
+        Navigation.NavigateTo($"/entry/{id}");
+    }
+
+    private async Task DeleteEntry(int id)
+    {
+        bool? delete = await DialogService.ShowMessageBox(
+           "Warning",
+           "Are you sure you want to delete this entry?",
+           yesText: "Delete", cancelText: "Cancel");
+
+        StateHasChanged();
+
+        if (delete == true)
+        {
+            await HttpDataService.DeleteAsync(url, id);
+            _entries = await HttpDataService.GetAllAsync("api/entry");
+        }
+    }
+}

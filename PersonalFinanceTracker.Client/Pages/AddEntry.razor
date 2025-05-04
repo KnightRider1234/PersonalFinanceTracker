@@ -1,0 +1,104 @@
+﻿@page "/entry"
+@page "/entry/{Id:int?}"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject IHttpDataService<EntryDto> HttpDataService
+@using PersonalFinanceTracker.Client.Interfaces
+@using PersonalFinanceTracker.Shared.DTOs
+@using PersonalFinanceTracker.Shared.Enums
+@using System.Globalization
+
+<PageTitle>Add Entry</PageTitle>
+
+<MudText Typo="Typo.h4">@TitleText</MudText>
+<br/>
+
+<EditForm Model="@_entry" OnValidSubmit="Submit">
+    <DataAnnotationsValidator />
+
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" sm="6" md="4">
+            <MudSelect @bind-Value="_entry.Type" Label="Type" For="@(() => _entry.Type)" AdornmentColor="Color.Secondary">
+                @foreach (EntryType type in Enum.GetValues(typeof(EntryType)))
+                {
+                    <MudSelectItem Value="@type">@type</MudSelectItem>
+                }
+            </MudSelect>
+            <br />
+            <MudTextField Label="Description" @bind-Value="_entry.Description" Placeholder="Please enter" For="@(() => _entry.Description)" />
+            <br />
+            <MudNumericField Label="Amount" @bind-Value="_entry.Amount" Format="C" Culture="@_lk" Min="0" For="@(() => _entry.Amount)" />
+            <br />
+            <MudDatePicker Label="Date" @bind-Date="_entry.Date" For="@(() => _entry.Date)" />
+            <br/>
+
+            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Outlined" Color="Color.Primary">@SubmitButtonText</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="@(()=>ResetForm())" Class="mx-2">Reset</MudButton>
+        </MudItem>
+    </MudGrid>
+</EditForm>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private string url = "api/entry";
+
+    private bool IsEditMode => Id.HasValue;
+
+    private string TitleText => IsEditMode ? "Update Entry" : "Add Entry";
+
+    private string SubmitButtonText => IsEditMode ? "Update" : "Submit";
+
+    private EntryDto _entry = new()
+    {
+            Date = DateTime.Today,
+            Type = EntryType.Income
+    };
+
+    public CultureInfo _lk = CultureInfo.GetCultureInfo("de-LK");
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEditMode)
+        {
+            var existing = await HttpDataService.GetByIdAsync(url, Id.Value);
+
+            if (existing != null)
+            {
+                _entry = existing;
+            }
+        }
+    }
+
+    private void ResetForm()
+    {
+        _entry = new EntryDto
+        {
+            Date = DateTime.Today,
+            Type = EntryType.Income
+        };
+    }
+
+    private async Task Submit()
+    {
+        try
+        {
+            if (IsEditMode)
+            {
+                await HttpDataService.PutAsync(url, Id.Value, _entry);
+            }
+            else
+            {
+                await HttpDataService.PostAsync(url, _entry);
+            }
+
+            Navigation.NavigateTo("/");
+
+            ResetForm();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+    }
+}
