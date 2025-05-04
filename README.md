@@ -99,3 +99,16 @@ Pagination/Filtering: To improve the performance and usability of the dashboard,
 Responsive Design: The UI can be enhanced to be more responsive, supporting mobile and tablet views effectively.
 
 Error Handling: Basic error handling is implemented in the API, but additional work can be done to ensure better error reporting and handling in production environments.
+
+## Time Estimation vs. Actual Time Spent
+
+| Task                              | Estimated Time | Actual Time     |
+|-----------------------------------|----------------|------------------|
+| Project Setup & Architecture      | 30 mins        | 1 hr          	|
+| Backend API Implementation        | 40 mins        | 1 hr 45 mins     |
+| Blazor Frontend Implementation    | 50 mins        | 2 hrs            |
+| UI Styling with MudBlazor         | 20 mins        | 1 hr        	|
+| Form Validation                   | 20 mins        | 30 mins          |
+| README & Documentation            | 20 mins        | 20 mins          |
+
+**Total**                           | **2.5 hours**  | **6.5 hours**
